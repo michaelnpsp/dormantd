@@ -1,11 +1,11 @@
 #!/bin/bash
 #
-# dormantd service installer (c) 2023 MiCHaEL (michael.npsp@gmail.com)
+# dormantd service installer (c) 2023 MiCHaEL <michael.npsp@gmail.com>
+# GitHub repository: <https://github.com/michaelnpsp/dormantd>
+# Released under GPL3 license <https://www.gnu.org/licenses/gpl-3.0.html>
 #
 # Monitorize data transmited over a network interface and suspend the 
 # computer if the current rx+ts bytes is less than a configured MINIMUM
-# This code was released under GPL3 licencse: 
-#   https://www.gnu.org/licenses/gpl-3.0.html
 #
 # usage:
 #   dormantd-install.sh      -- install dormantd package
@@ -16,6 +16,8 @@
 #   /usr/bin/dormantd   -- dormantd daemon
 #   /etc/systemd/system/dormantd.service -- systemd service config file
 #
+
+VERSION=1.0.0
 
 DESTDIR=$1
 
@@ -28,7 +30,6 @@ DESTDIR=$1
 #######################################################################################
 # helper functions and variables
 #######################################################################################
-
 
 # set destination file variable
 function set_destfile()
@@ -43,12 +44,13 @@ function set_destfile_owner()
 {
     [ -v root ] && chown root:root $destfile
     [ -n "$1" ] && chmod +x $destfile
+    echo "  $destfile"
 }
 
 #######################################################################################
 
-
-echo "Installing dormantd service."
+echo "Dormantd v$VERSION installation started:"
+echo "Installing files ..."
 
 #######################################################################################
 # /etc/dormantd.conf
@@ -99,16 +101,29 @@ set_destfile_owner
 
 set_destfile usr/bin dormantd
 
-cat <<"END_OF_FILE" > $destfile
+# code with variable expansion
+cat << END_OF_FILE > $destfile
 #!/bin/bash
 
-# uninstall code
+# Bash script to monitorize bytes transmited over a network interface and
+# suspend the computer if the current rx+ts bytes is less than a MINIMUM
+# GitHub repository: <https://github.com/michaelnpsp/dormantd>
+# Released under GPL3 license: <https://www.gnu.org/licenses/gpl-3.0.html>
+# (C) 2023 MiCHaEL <michael.npsp@gmail.com>
+
+VERSION=$VERSION
+
+END_OF_FILE
+
+# code without variable expansion
+cat <<"END_OF_FILE" >> $destfile
+# uninstall
 
 if [ "$1" == "uninstall" ]; then
     [ "$(id -u)" -eq 0 ] || { echo "You must be root to uninstall this program."; exit 1; }
     read -r -p "Are you sure you want to uninstall dormantd ? [y/N] " response
     if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-        echo "Uninstalling dormantd:"
+        echo "Uninstalling dormantd v$VERSION:"
         systemctl stop dormantd
         systemctl disable dormantd
         rm -v /etc/dormantd.conf
@@ -119,12 +134,11 @@ if [ "$1" == "uninstall" ]; then
     exit 0
 fi
 
-# Bash script to monitorize bytes transmited over a network interface and
-# suspend the computer if the current rx+ts bytes is less than a MINIMUM
+# daemon
 
 . /etc/dormantd.conf
 
-echo "Interface: $INTERFACE, Interval: $INTERVAL seconds, Minimum Traffic: $MINIMUM bytes."
+echo "Version: $VERSION, Interface: $INTERFACE, Interval: $INTERVAL seconds, Minimum Traffic: $MINIMUM bytes."
 
 tx_file="/sys/class/net/$INTERFACE/statistics/tx_bytes"
 rx_file="/sys/class/net/$INTERFACE/statistics/rx_bytes"
@@ -151,13 +165,15 @@ set_destfile_owner x
 #######################################################################################
 
 if [ -v root ]; then
+    echo "Registering dormantd service ..."
     systemctl daemon-reload
     systemctl enable dormantd
+    echo "Starting dormantd service ..."
     systemctl restart dormantd
-    echo "/etc/dormantd.conf -> configuration file."
-    echo "systemctl restart dormantd -> reload configuration."
-    echo "journalctl -u dormantd -f -> display dormantd log."
-    echo "dormantd uninstall -> uninstall this package."
+    echo "Installation finished."
+    echo "Useful commands:"
+    echo "  nano /etc/dormantd.conf --edit configuration file."
+    echo "  systemctl restart dormantd --reload configuration."
+    echo "  journalctl -u dormantd -f --display dormantd log."
+    echo "  dormantd uninstall --uninstall this package."
 fi
-
-echo "Done."
