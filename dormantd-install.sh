@@ -9,7 +9,7 @@
 #
 # usage:
 #   dormantd-install.sh      -- install dormantd package
-#   dormant-install.sh  path -- install in the specified path, for debug purposes
+#   dormantd-install.sh path -- install in the specified path, for debug purposes
 #
 # installed files:
 #   /etc/dormantd.conf  -- dormant config file
